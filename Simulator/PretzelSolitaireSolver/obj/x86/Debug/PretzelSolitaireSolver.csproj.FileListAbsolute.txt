@@ -1,0 +1,12 @@
+/Users/jdroscha/Projects/PretzelSolitaireSolver/PretzelSolitaireSolver/bin/Debug/PretzelSolitaireSolver.exe
+/Users/jdroscha/Projects/PretzelSolitaireSolver/PretzelSolitaireSolver/bin/Debug/PretzelSolitaireSolver.pdb
+/Users/jdroscha/Projects/PretzelSolitaireSolver/PretzelSolitaireSolver/obj/x86/Debug/PretzelSolitaireSolver.csprojAssemblyReference.cache
+/Users/jdroscha/Projects/PretzelSolitaireSolver/PretzelSolitaireSolver/obj/x86/Debug/PretzelSolitaireSolver.csproj.CoreCompileInputs.cache
+/Users/jdroscha/Projects/PretzelSolitaireSolver/PretzelSolitaireSolver/obj/x86/Debug/PretzelSolitaireSolver.exe
+/Users/jdroscha/Projects/PretzelSolitaireSolver/PretzelSolitaireSolver/obj/x86/Debug/PretzelSolitaireSolver.pdb
+/Users/jdroscha/Documents/Visual Studio Projects/PretzelSolitaireSolver/PretzelSolitaireSolver/bin/Debug/PretzelSolitaireSolver.exe
+/Users/jdroscha/Documents/Visual Studio Projects/PretzelSolitaireSolver/PretzelSolitaireSolver/bin/Debug/PretzelSolitaireSolver.pdb
+/Users/jdroscha/Documents/Visual Studio Projects/PretzelSolitaireSolver/PretzelSolitaireSolver/obj/x86/Debug/PretzelSolitaireSolver.csprojAssemblyReference.cache
+/Users/jdroscha/Documents/Visual Studio Projects/PretzelSolitaireSolver/PretzelSolitaireSolver/obj/x86/Debug/PretzelSolitaireSolver.csproj.CoreCompileInputs.cache
+/Users/jdroscha/Documents/Visual Studio Projects/PretzelSolitaireSolver/PretzelSolitaireSolver/obj/x86/Debug/PretzelSolitaireSolver.exe
+/Users/jdroscha/Documents/Visual Studio Projects/PretzelSolitaireSolver/PretzelSolitaireSolver/obj/x86/Debug/PretzelSolitaireSolver.pdb
