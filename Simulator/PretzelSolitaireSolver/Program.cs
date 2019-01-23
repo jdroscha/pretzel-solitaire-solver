@@ -35,6 +35,13 @@ namespace PretzelSolitaireSolver {
         ushort SuitCount;
         ushort ValueCount;
 
+        public PretzelPosition(uint[] tableau, int[] holeIndices, ushort suitCount, ushort valueCount) {
+            Tableau = tableau;
+            HoleIndices = holeIndices;
+            SuitCount = suitCount;
+            ValueCount = valueCount;
+        }
+
         public PretzelPosition(CardDeck deck) {
             Tableau = deck.Cards;
             HoleIndices = new int[deck.SuitCount];
@@ -51,28 +58,13 @@ namespace PretzelSolitaireSolver {
             }
         }
 
-        public PretzelPosition(PretzelPosition precedingPosition) {
-            Tableau = new uint[precedingPosition.Tableau.Length];
-            Array.Copy(precedingPosition.Tableau, Tableau, precedingPosition.Tableau.Length);
-            HoleIndices = new int[precedingPosition.HoleIndices.Length];
-            Array.Copy(precedingPosition.HoleIndices, HoleIndices, precedingPosition.HoleIndices.Length);
-            SuitCount = precedingPosition.SuitCount;
-            ValueCount = precedingPosition.ValueCount;
-        }
-
-        private bool EqualTo(PretzelPosition position) {
-            // check if holes match first, to give a quick out in most cases
-            for (int i = 0; i < HoleIndices.Length; ++i) {
-                if (HoleIndices[i] != position.HoleIndices[i]) {
-                    return false;
-                }
-            }
-            for (int i = 0; i < Tableau.Length; ++i) {
-                if (Tableau[i] != position.Tableau[i]) {
-                    return false;
-                }
-            }
-            return true;
+        public PretzelPosition(PretzelPosition previousPosition) {
+            Tableau = new uint[previousPosition.Tableau.Length];
+            Array.Copy(previousPosition.Tableau, Tableau, previousPosition.Tableau.Length);
+            HoleIndices = new int[previousPosition.HoleIndices.Length];
+            Array.Copy(previousPosition.HoleIndices, HoleIndices, previousPosition.HoleIndices.Length);
+            SuitCount = previousPosition.SuitCount;
+            ValueCount = previousPosition.ValueCount;
         }
 
         public List<PretzelPosition> GetSubsequentPositions() {
@@ -88,6 +80,9 @@ namespace PretzelSolitaireSolver {
                     cardNumberThatFitsHole = NoCard; // NOTE: redundant
                 } else if (Tableau[HoleIndices[i] - 1] % ValueCount < (ValueCount - 1)) {
                     // card before hole is not King, so next sequential card fits hole
+                    // NOTE: In most versions of the game, the conditional for this else is extraneous
+                    //       since the next card number after a King is an Ace and all Aces were
+                    //       pulled out of the deck after the shuffle.  Left in for variants.
                     cardNumberThatFitsHole = Tableau[HoleIndices[i] - 1] + 1;
                 }
                 // if possible, create position resulting from moving card into hole
@@ -115,54 +110,70 @@ namespace PretzelSolitaireSolver {
             return solved;
         }
 
-        private class AttainablePosition {
-            public readonly PretzelPosition Position;
-            public readonly int ParentIndex; 
-            public AttainablePosition(PretzelPosition position, int parentIndex) {
-                Position = position;
-                ParentIndex = parentIndex;
-            }
-        }
-
         // NOTE: returns minimum moves required to solve; returns -1 if not solvable
-        public short Solve(PretzelPosition position) {
+        // WARNING: stores all attained positions in memory twice
+        public short Solve() {
             const int None = -1;
-            List<AttainablePosition> positionNodes = new List<AttainablePosition>();
-            positionNodes.Add(new AttainablePosition(position, None));
+            List<PretzelPosition> attainablePositionList = new List<PretzelPosition>(); // ordered list of positions attained
+            List<int> attainablePositionParentIndex = new List<int>(); // parallel to attainablePositionList
+            Dictionary<uint, object> attainedPositions = new Dictionary<uint, object>(); // trie of all positions attained
+            // add initial position to list
+            attainablePositionList.Add(this);
+            attainablePositionParentIndex.Add(None);
+            // add initial position to trie
+            Dictionary<uint, object> childNode = null;
+            for (int i = Tableau.Length - 1; i >= 0; --i) {
+                Dictionary<uint, object> trieNode = new Dictionary<uint, object>();
+                trieNode.Add(Tableau[i], childNode);
+                childNode = trieNode;
+            }
             int solutionIndex = None;
             int currentIndex = 0;
-            while ((solutionIndex == None) && (currentIndex < positionNodes.Count)) {
+            while ((solutionIndex == None) && (currentIndex < attainablePositionList.Count)) {
                 // Console.WriteLine(attainablePositions[currentPositionIndex].ToString());
-                if (positionNodes[currentIndex].Position.IsSolved()) {
+                if (attainablePositionList[currentIndex].IsSolved()) {
                     solutionIndex = currentIndex;
-                    break;
                 } else {
-                    List<PretzelPosition> subsequentPositions = positionNodes[currentIndex].Position.GetSubsequentPositions();
+                    List<PretzelPosition> subsequentPositions = attainablePositionList[currentIndex].GetSubsequentPositions();
                     for (int i = 0; i < subsequentPositions.Count; ++i) {
                         // check if position has already been attained
-                        bool positionFound = false;
-                        int j = positionNodes.Count - 1;
-                        while (!positionFound && (j >= 0)) {
-                            if (subsequentPositions[i].EqualTo(positionNodes[j].Position)) {
-                                positionFound = true;
+                        bool positionPreviouslyAttained = true;
+                        uint currentGridLocation = 0;
+                        Dictionary<uint, object> currentNode = attainedPositions;
+                        object childNodeObject = null;
+                        while (positionPreviouslyAttained && (currentGridLocation < subsequentPositions[i].Tableau.Length)) {
+                            if (currentNode.TryGetValue(subsequentPositions[i].Tableau[currentGridLocation], out childNodeObject)) {
+                                currentNode = (Dictionary<uint, object>)childNodeObject;
+                                ++currentGridLocation;
+                            } else {
+                                positionPreviouslyAttained = false;
+                                // add remainder of position to trie
+                                childNode = null;
+                                for (int j = subsequentPositions[i].Tableau.Length - 1; j > currentGridLocation; --j) {
+                                    Dictionary<uint, object> newNode = new Dictionary<uint, object>();
+                                    newNode.Add(subsequentPositions[i].Tableau[j], childNode);
+                                    childNode = newNode;
+                                }
+                                currentNode.Add(subsequentPositions[i].Tableau[currentGridLocation], childNode);
                             }
-                            --j;
                         }
-                        // if new position attained, throw it at the end of node list
-                        if (!positionFound) {
-                            positionNodes.Add(new AttainablePosition(subsequentPositions[i], currentIndex));
+                        // if new position attained, throw it at the end of attainable position list
+                        if (!positionPreviouslyAttained) {
+                            attainablePositionList.Add(subsequentPositions[i]);
+                            attainablePositionParentIndex.Add(currentIndex);
                         }
                     }
                 }
                 ++currentIndex;
             }
             // log results
-            Console.WriteLine(positionNodes.Count + " Attainable Positions Explored");
+            Console.WriteLine(attainablePositionList.Count + " Attainable Positions Explored");
             if (solutionIndex != None) {
+                Console.WriteLine("Shortest Solution (read last line to first):");
                 short solutionMoveCount = 0;
                 while (solutionIndex != None) {
-                    Console.WriteLine(positionNodes[solutionIndex].Position.ToString());
-                    solutionIndex = positionNodes[solutionIndex].ParentIndex;
+                    Console.WriteLine(attainablePositionList[solutionIndex].ToString());
+                    solutionIndex = attainablePositionParentIndex[solutionIndex];
                     ++solutionMoveCount;
                 }
                 --solutionMoveCount; // do not count starting position
@@ -176,7 +187,7 @@ namespace PretzelSolitaireSolver {
 
         public override string ToString() {
             string output = string.Empty;
-            // NOTE: range breaks for suit count > 20
+            // WARNING: range breaks for suit count > 20
             string[] suitNames = { "S", "H", "D", "C", "A", "B", "E", "F", "G", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "T" };
             for (int i = 0; i < Tableau.Length; ++i) {
                 if (Tableau[i] > 0) {
@@ -203,11 +214,11 @@ namespace PretzelSolitaireSolver {
             long totalMinimumMovesRequired = 0;
             ushort iterations = 1000;
             for (int i = 0; i < iterations; ++i) {
-                Console.WriteLine("Iteration " + i.ToString());
+                Console.WriteLine("\nIteration " + i.ToString());
                 deck.Shuffle();
                 PretzelPosition position = new PretzelPosition(deck);
                 Console.WriteLine(position.ToString());
-                short minimumMovesRequired = position.Solve(position);
+                short minimumMovesRequired = position.Solve();
                 if (minimumMovesRequired > -1) {
                     ++solvedPretzels;
                     totalMinimumMovesRequired += minimumMovesRequired;
