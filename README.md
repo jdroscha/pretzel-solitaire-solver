@@ -37,6 +37,12 @@ Usage help: PretzelSolitaireSolver.exe ?
     e. The total number of anti-goal moves taken for all solvable challenges in the trial
 2. The final row of the table displays roll-up totals for all trials
 
+## Terminology and Notation
+
+Terminology used for variable and method naming within the code, as well as output notation, follow de Brujin (1981).  See [https://pure.tue.nl/ws/files/4284803/598855.pdf](https://pure.tue.nl/ws/files/4284803/598855.pdf)
+
 ## Memory Warning
 
 If the suit count x value count exceeds 40 or so, you might experience memory issues on some platforms.  Increasing heap space might help.  Consult documentation for your platform.
+
+For grids larger than RAM allows, modification to store previously attained positions (board states) in a database should be considered.
