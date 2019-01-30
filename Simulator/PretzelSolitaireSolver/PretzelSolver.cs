@@ -38,18 +38,21 @@ namespace PretzelSolitaireSolver {
             resultsHeader += ", Values: " + ValueCount.ToString();
             resultsHeader += ", Deal: " + Deal.ToString();
             resultsHeader += ", Approach: " + Approach.ToString();
+            resultsHeader += ", Ouput: " + Output.ToString();
             Console.WriteLine(resultsHeader);
-            if (Output == OutputType.Summary)
+            if (Output != OutputType.Verbose)
                 Console.WriteLine("\nTrial \tIters \tSolved \tMoves \tAntiGoalMoves");
 
             CardDeck deck = new CardDeck(SuitCount, ValueCount);
             DateTime solveStartTime = DateTime.UtcNow;
+            string moveCounts = string.Empty;
+            string antiGoalMoveCounts = string.Empty;
             ushort totalSolvedPretzels = 0;
-            ulong totalMinimumMovesRequired = 0;
+            ulong totalMoves = 0;
             ulong totalAntiGoalMoves = 0;
             for (int t = 0; t < Trials; ++t) {
                 ushort trialSolvedPretzels = 0;
-                ulong trialMinimumMovesRequired = 0;
+                ulong trialMoves = 0;
                 ulong trialAntiGoalMoves = 0;
                 for (int i = 0; i < Iterations; ++i) {
                     if (Output == OutputType.Verbose)
@@ -61,12 +64,16 @@ namespace PretzelSolitaireSolver {
                     SolveResults results = Solve(position, Approach, Output);
                     if (results.Solvable) {
                         ++trialSolvedPretzels;
-                        trialMinimumMovesRequired += results.MinimumMoves;
+                        trialMoves += results.Moves;
                         trialAntiGoalMoves += results.AntiGoalMoves;
+                        if (Output == OutputType.SummaryWithMoveCounts) {
+                            moveCounts += results.Moves.ToString() + ", ";
+                            antiGoalMoveCounts += results.AntiGoalMoves.ToString() + ", ";
+                        }
                     }
                 }
                 totalSolvedPretzels += trialSolvedPretzels;
-                totalMinimumMovesRequired += trialMinimumMovesRequired;
+                totalMoves += trialMoves;
                 totalAntiGoalMoves += trialAntiGoalMoves;
                 // output trial results
                 if (Output == OutputType.Verbose)
@@ -74,9 +81,13 @@ namespace PretzelSolitaireSolver {
                 string trialResults = t.ToString();
                 trialResults += "\t" + Iterations.ToString();
                 trialResults += "\t" + trialSolvedPretzels.ToString();
-                trialResults += "\t" + trialMinimumMovesRequired.ToString();
+                trialResults += "\t" + trialMoves.ToString();
                 trialResults += "\t" + trialAntiGoalMoves.ToString();
                 Console.WriteLine(trialResults);
+                if (Output == OutputType.SummaryWithMoveCounts) {
+                    moveCounts += "\n\n";
+                    antiGoalMoveCounts += "\n\n";
+                }
             }
             // output total results
             DateTime solveEndTime = DateTime.UtcNow;
@@ -84,9 +95,15 @@ namespace PretzelSolitaireSolver {
             string totalResults = "TOTAL: ";
             totalResults += "\t" + (Trials * Iterations).ToString();
             totalResults += "\t" + totalSolvedPretzels.ToString();
-            totalResults += "\t" + totalMinimumMovesRequired.ToString();
+            totalResults += "\t" + totalMoves.ToString();
             totalResults += "\t" + totalAntiGoalMoves.ToString();
             Console.WriteLine(totalResults);
+            if (Output == OutputType.SummaryWithMoveCounts) {
+                Console.WriteLine("\nMove Counts for All Solved Pretzels, Grouped by Trial");
+                Console.WriteLine(moveCounts);
+                Console.WriteLine("Anti-Goal Move Counts for All Solved Pretzels, Grouped by Trial");
+                Console.WriteLine(antiGoalMoveCounts);
+            }
             Console.WriteLine("");
             Console.WriteLine((solveEndTime - solveStartTime).ToString() + " Elapsed");
             Console.Write((char)7); // play bell
@@ -154,7 +171,7 @@ namespace PretzelSolitaireSolver {
                 Console.WriteLine(attainablePositionList.Count + " Attainable Positions Explored");
             if (solutionIndex != None) {
                 if (output == OutputType.Verbose)
-                    Console.WriteLine("Shortest Solution (read last line to first):");
+                    Console.WriteLine("Solution (read last line to first):");
                 ushort solutionMoveCount = 0;
                 ushort solutionAntiGoalMoveCount = 0;
                 while (solutionIndex != None) {
@@ -167,12 +184,12 @@ namespace PretzelSolitaireSolver {
                 }
                 --solutionMoveCount; // do not count starting position
                 if (output == OutputType.Verbose)
-                    Console.WriteLine(solutionMoveCount.ToString() + " Minimum Moves Required, including " + solutionAntiGoalMoveCount.ToString() + " Anti-Goal Moves");
-                return new SolveResults { Solvable = true, MinimumMoves = solutionMoveCount, AntiGoalMoves = solutionAntiGoalMoveCount };
+                    Console.WriteLine(solutionMoveCount.ToString() + " Moves, including " + solutionAntiGoalMoveCount.ToString() + " Anti-Goal Moves");
+                return new SolveResults { Solvable = true, Moves = solutionMoveCount, AntiGoalMoves = solutionAntiGoalMoveCount };
             } else {
                 if (output == OutputType.Verbose)
                     Console.WriteLine("No Solution Found");
-                return new SolveResults { Solvable = false, MinimumMoves = 0, AntiGoalMoves = 0 };
+                return new SolveResults { Solvable = false, Moves = 0, AntiGoalMoves = 0 };
             }
         }
 

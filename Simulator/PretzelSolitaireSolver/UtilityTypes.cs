@@ -4,7 +4,7 @@ namespace PretzelSolitaireSolver {
 
     public struct SolveResults {
         public bool Solvable;
-        public ushort MinimumMoves;
+        public ushort Moves;
         public ushort AntiGoalMoves;
     }
 

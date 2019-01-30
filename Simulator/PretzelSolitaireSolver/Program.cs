@@ -27,7 +27,8 @@ namespace PretzelSolitaireSolver {
 
     public enum OutputType {
         Summary = 0,
-        Verbose = 1
+        SummaryWithMoveCounts = 1,
+        Verbose = 2
     }
 
 
@@ -45,7 +46,7 @@ namespace PretzelSolitaireSolver {
                                               iterations: 100,
                                               deal: DealType.StandardShuffle,
                                               approach: ApproachType.BreadthFirst,
-                                              output: OutputType.Summary);
+                                              output: OutputType.SummaryWithMoveCounts);
                 // Command Line Execution Template
                 //Simulator sim = new Simulator(arguments[ArgumentType.suitCount],
                                               //arguments[ArgumentType.valueCount],
@@ -67,7 +68,7 @@ namespace PretzelSolitaireSolver {
             arguments.Add(ArgumentType.iterationsPerTrial, 100);
             arguments.Add(ArgumentType.dealType, 0);
             arguments.Add(ArgumentType.approach, 0);
-            arguments.Add(ArgumentType.outputType, 0);
+            arguments.Add(ArgumentType.outputType, 1);
             // override defaults with user supplied values
             char[] extraneousChars = new char[] { '-', '/', '\\'};
             for (int i = 0; i < args.Length; ++i) {
@@ -80,7 +81,7 @@ namespace PretzelSolitaireSolver {
                     case 'i': { arguments[ArgumentType.iterationsPerTrial] = value.Clamp(1,10000); break; }
                     case 'd': { arguments[ArgumentType.dealType] = value.Clamp(0,3); break; }
                     case 'a': { arguments[ArgumentType.approach] = value.Clamp(0,1); break; }
-                    case 'o': { arguments[ArgumentType.outputType] = value.Clamp(0,1); break; }
+                    case 'o': { arguments[ArgumentType.outputType] = value.Clamp(0,2); break; }
                     default: { arguments.Add(ArgumentType.help, 1); break; }
                 }
             }
@@ -101,10 +102,12 @@ namespace PretzelSolitaireSolver {
             Console.WriteLine("      a=(0|1), approach for solving, default is 0:");
             Console.WriteLine("         0 is breadth-first (minimum number of moves)");
             Console.WriteLine("         1 is random moves");
-            Console.WriteLine("      o=(0|1), output type, default is 0:");
+            Console.WriteLine("      o=(0|1|2), output type, default is 1:");
             Console.WriteLine("         0 is summary results only");
-            Console.WriteLine("         1 is verbose, including solve steps where applicable");
+            Console.WriteLine("         1 is summary results with move counts");
+            Console.WriteLine("         2 is verbose, including solve steps where applicable");
             Console.WriteLine("      ?, display this usage help (no execution)");
+            Console.WriteLine("example: PretzelSolitaireSolver s=4 v=4 t=10 i=100 d=0 a=0 o=1");
         }
 
     }
