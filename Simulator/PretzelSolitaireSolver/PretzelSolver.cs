@@ -40,21 +40,26 @@ namespace PretzelSolitaireSolver {
             resultsHeader += ", Approach: " + Approach.ToString();
             resultsHeader += ", Ouput: " + Output.ToString();
             Console.WriteLine(resultsHeader);
+
+            string summaryHeader = "\nTrial \tIters \tSolved \tMoves";
+            if (Approach == ApproachType.FullTree)
+                summaryHeader += " \tNoFail \tDeadends_for_Solvable";
             if (Output != OutputType.Verbose)
-                Console.WriteLine("\nTrial \tIters \tSolved \tMoves \tAntiGoalMoves");
+                Console.WriteLine(summaryHeader);
 
             CardDeck deck = new CardDeck(SuitCount, ValueCount);
             DateTime solveStartTime = DateTime.UtcNow;
             string moveCounts = string.Empty;
-            string antiGoalMoveCounts = string.Empty;
             ushort totalSolvedPretzels = 0;
             ulong totalMoves = 0;
-            ulong totalAntiGoalMoves = 0;
-            for (int t = 0; t < Trials; ++t) {
+            ushort totalUnlosablePretzels = 0;
+            ulong totalDeadendsForSolvablePretzels = 0;
+            for (short t = 0; t < Trials; ++t) {
                 ushort trialSolvedPretzels = 0;
                 ulong trialMoves = 0;
-                ulong trialAntiGoalMoves = 0;
-                for (int i = 0; i < Iterations; ++i) {
+                ushort trialUnlosablePretzels = 0;
+                ulong trailDeadendsForSolvablePretzels = 0;
+                for (short i = 0; i < Iterations; ++i) {
                     if (Output == OutputType.Verbose)
                         Console.WriteLine("\nTrial " + t.ToString() + " Iteration " + i.ToString());
                     deck.Shuffle(Deal);
@@ -65,28 +70,33 @@ namespace PretzelSolitaireSolver {
                     if (results.Solvable) {
                         ++trialSolvedPretzels;
                         trialMoves += results.Moves;
-                        trialAntiGoalMoves += results.AntiGoalMoves;
                         if (Output == OutputType.SummaryWithMoveCounts) {
                             moveCounts += results.Moves.ToString() + ", ";
-                            antiGoalMoveCounts += results.AntiGoalMoves.ToString() + ", ";
+                        }
+                        trailDeadendsForSolvablePretzels += results.Deadends;
+                        if (results.Deadends == 0) {
+                            ++trialUnlosablePretzels;
                         }
                     }
                 }
                 totalSolvedPretzels += trialSolvedPretzels;
                 totalMoves += trialMoves;
-                totalAntiGoalMoves += trialAntiGoalMoves;
+                totalUnlosablePretzels += trialUnlosablePretzels;
+                totalDeadendsForSolvablePretzels += trailDeadendsForSolvablePretzels;
                 // output trial results
                 if (Output == OutputType.Verbose)
-                    Console.WriteLine("\nTrial \tIters \tSolved \tMoves \tAntiGoalMoves");
+                    Console.WriteLine(summaryHeader);
                 string trialResults = t.ToString();
                 trialResults += "\t" + Iterations.ToString();
                 trialResults += "\t" + trialSolvedPretzels.ToString();
                 trialResults += "\t" + trialMoves.ToString();
-                trialResults += "\t" + trialAntiGoalMoves.ToString();
+                if (Approach == ApproachType.FullTree) {
+                    trialResults += "\t" + trialUnlosablePretzels.ToString();
+                    trialResults += "\t" + trailDeadendsForSolvablePretzels.ToString();
+                }
                 Console.WriteLine(trialResults);
                 if (Output == OutputType.SummaryWithMoveCounts) {
                     moveCounts += "\n\n";
-                    antiGoalMoveCounts += "\n\n";
                 }
             }
             // output total results
@@ -96,13 +106,14 @@ namespace PretzelSolitaireSolver {
             totalResults += "\t" + (Trials * Iterations).ToString();
             totalResults += "\t" + totalSolvedPretzels.ToString();
             totalResults += "\t" + totalMoves.ToString();
-            totalResults += "\t" + totalAntiGoalMoves.ToString();
+            if (Approach == ApproachType.FullTree) {
+                totalResults += "\t" + totalUnlosablePretzels.ToString();
+                totalResults += "\t" + totalDeadendsForSolvablePretzels.ToString();
+            }
             Console.WriteLine(totalResults);
             if (Output == OutputType.SummaryWithMoveCounts) {
                 Console.WriteLine("\nMove Counts for All Solved Pretzels, Grouped by Trial");
                 Console.WriteLine(moveCounts);
-                Console.WriteLine("Anti-Goal Move Counts for All Solved Pretzels, Grouped by Trial");
-                Console.WriteLine(antiGoalMoveCounts);
             }
             Console.WriteLine("");
             Console.WriteLine((solveEndTime - solveStartTime).ToString() + " Elapsed");
@@ -111,85 +122,94 @@ namespace PretzelSolitaireSolver {
 
         // WARNING: stores all attained positions in memory in two shapes, and can cause memory issues on some platforms
         public SolveResults Solve(PretzelPosition position, ApproachType approach, OutputType output) {
-            List<PositionInfo> attainablePositionList = new List<PositionInfo>(); // ordered list of positions attained
-            Dictionary<uint, object> attainedPositions = new Dictionary<uint, object>(); // trie of all positions attained
+            List<PositionInfo> attainablePositionList = new List<PositionInfo>(); // ordered list of positions known to be attainable (explored or not yet explored)
+            Dictionary<ushort, object> attainedPositions = new Dictionary<ushort, object>(); // trie of all positions attained (explored)
             // add initial position to list
-            attainablePositionList.Add(new PositionInfo(position, None, false));
+            attainablePositionList.Add(new PositionInfo(position, None));
             // add initial position to trie
-            Dictionary<uint, object> childNode = null;
-            for (int i = position.Tableau.Length - 1; i >= 0; --i) {
-                Dictionary<uint, object> trieNode = new Dictionary<uint, object>();
-                trieNode.Add(position.Tableau[i], childNode);
+            int lastTableauIndex = position.Tableau.Length - 1;
+            Dictionary<ushort, object> childNode = new Dictionary<ushort, object> { { position.Tableau[lastTableauIndex], 0 } };
+            for (int i = lastTableauIndex - 1; i >= 0; --i) {
+                Dictionary<ushort, object> trieNode = new Dictionary<ushort, object> { { position.Tableau[i], childNode } };
                 childNode = trieNode;
             }
             int solutionIndex = None;
+            List<int> deadendIndexes = new List<int>();
             int currentIndex = 0;
-            while ((solutionIndex == None) && (currentIndex < attainablePositionList.Count)) {
+            while (((solutionIndex == None) || (approach == ApproachType.FullTree)) && (currentIndex < attainablePositionList.Count)) {
                 if (attainablePositionList[currentIndex].Position.IsSolved()) {
                     solutionIndex = currentIndex;
                 } else {
-                    List<PositionInfo> subsequentPositions = attainablePositionList[currentIndex].Position.GetSubsequentPositions();
+                    List<PretzelPosition> subsequentPositions = attainablePositionList[currentIndex].Position.GetSubsequentPositions();
                     if ((approach == ApproachType.RandomPlay) && (subsequentPositions.Count > 0)) {
-                        int randomPlayIndex = rng.Next(0, subsequentPositions.Count);
-                        subsequentPositions[randomPlayIndex].ParentIndex = currentIndex;
-                        attainablePositionList.Add(subsequentPositions[randomPlayIndex]);
-                    } else {
-                        for (int i = 0; i < subsequentPositions.Count; ++i) {
+                        short randomPlayIndex = (short)rng.Next(0, subsequentPositions.Count);
+                        attainablePositionList.Add(new PositionInfo(subsequentPositions[randomPlayIndex], currentIndex));
+                    } else if (subsequentPositions.Count > 0) {
+                        for (short i = 0; i < subsequentPositions.Count; ++i) {
                             // check if position has already been attained
                             bool positionPreviouslyAttained = true;
-                            uint currentGridLocation = 0;
-                            Dictionary<uint, object> currentNode = attainedPositions;
+                            int attainablePositionListIndex = None;
+                            ushort currentTableauIndex = 0;
+                            Dictionary<ushort, object> currentNode = attainedPositions;
                             object childNodeObject = null;
-                            while (positionPreviouslyAttained && (currentGridLocation < subsequentPositions[i].Position.Tableau.Length)) {
-                                if (currentNode.TryGetValue(subsequentPositions[i].Position.Tableau[currentGridLocation], out childNodeObject)) {
-                                    currentNode = (Dictionary<uint, object>)childNodeObject;
-                                    ++currentGridLocation;
+                            while (positionPreviouslyAttained && (currentTableauIndex <= lastTableauIndex)) {
+                                if (currentNode.TryGetValue((ushort)subsequentPositions[i].Tableau[currentTableauIndex], out childNodeObject)) {
+                                    if (currentTableauIndex < lastTableauIndex) {
+                                        currentNode = (Dictionary<ushort, object>)childNodeObject;
+                                    } else {
+                                        attainablePositionListIndex = (int)childNodeObject; // unbox index of position in attainablePositionList from position's last grid position node in trie
+                                    }
+                                    ++currentTableauIndex;
                                 } else {
                                     positionPreviouslyAttained = false;
-                                    // add remainder of position to trie
-                                    childNode = null;
-                                    for (int j = subsequentPositions[i].Position.Tableau.Length - 1; j > currentGridLocation; --j) {
-                                        Dictionary<uint, object> newNode = new Dictionary<uint, object>();
-                                        newNode.Add(subsequentPositions[i].Position.Tableau[j], childNode);
+                                    // add remainder of position to trie, starting at the last grid position and chaining forward to divergent node
+                                    // NOTE: last grid position in trie contains boxed index of this position within attainablePositionList
+                                    childNode = new Dictionary<ushort, object> { { subsequentPositions[i].Tableau[lastTableauIndex], currentIndex } };
+                                    for (int j = lastTableauIndex - 1; j > currentTableauIndex; --j) {
+                                        Dictionary<ushort, object> newNode = new Dictionary<ushort, object> { { subsequentPositions[i].Tableau[j], childNode } };
                                         childNode = newNode;
                                     }
-                                    currentNode.Add(subsequentPositions[i].Position.Tableau[currentGridLocation], childNode);
+                                    currentNode.Add((ushort)subsequentPositions[i].Tableau[currentTableauIndex], childNode);
                                 }
                             }
                             // if new position attained, queue it at the end of attainable position list
                             if (!positionPreviouslyAttained) {
-                                subsequentPositions[i].ParentIndex = currentIndex;
-                                attainablePositionList.Add(subsequentPositions[i]);
+                                attainablePositionList.Add(new PositionInfo(subsequentPositions[i], currentIndex));
+                            } else if (approach == ApproachType.FullTree) {
+                                // position already reached; add new path to it if analyzing full decision tree
+                                attainablePositionList[attainablePositionListIndex].ParentIndexes.Add(currentIndex);
                             }
                         }
+                    } else {
+                        // deadend
+                        deadendIndexes.Add(currentIndex);
                     }
                 }
                 ++currentIndex;
             }
             // output and return results
-            if (output == OutputType.Verbose)
+            if (output == OutputType.Verbose) {
                 Console.WriteLine(attainablePositionList.Count + " Attainable Positions Explored");
+                Console.WriteLine(deadendIndexes.Count.ToString() + " Dead Ends");
+            }
             if (solutionIndex != None) {
                 if (output == OutputType.Verbose)
                     Console.WriteLine("Solution (read last line to first):");
                 ushort solutionMoveCount = 0;
-                ushort solutionAntiGoalMoveCount = 0;
                 while (solutionIndex != None) {
                     if (output == OutputType.Verbose)
                         Console.WriteLine(attainablePositionList[solutionIndex].Position.ToString());
-                    if (attainablePositionList[solutionIndex].IsAntiGoalMove)
-                        ++solutionAntiGoalMoveCount;
-                    solutionIndex = attainablePositionList[solutionIndex].ParentIndex;
+                    solutionIndex = attainablePositionList[solutionIndex].ParentIndexes[0];
                     ++solutionMoveCount;
                 }
                 --solutionMoveCount; // do not count starting position
                 if (output == OutputType.Verbose)
-                    Console.WriteLine(solutionMoveCount.ToString() + " Moves, including " + solutionAntiGoalMoveCount.ToString() + " Anti-Goal Moves");
-                return new SolveResults { Solvable = true, Moves = solutionMoveCount, AntiGoalMoves = solutionAntiGoalMoveCount };
+                    Console.WriteLine(solutionMoveCount.ToString() + " Moves");
+                return new SolveResults { Solvable = true, Moves = solutionMoveCount, Deadends = (ushort)deadendIndexes.Count };
             } else {
                 if (output == OutputType.Verbose)
                     Console.WriteLine("No Solution Found");
-                return new SolveResults { Solvable = false, Moves = 0, AntiGoalMoves = 0 };
+                return new SolveResults { Solvable = false, Moves = 0, Deadends = (ushort)deadendIndexes.Count };
             }
         }
 

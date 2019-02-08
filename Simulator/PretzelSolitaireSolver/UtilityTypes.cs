@@ -1,21 +1,20 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace PretzelSolitaireSolver {
 
     public struct SolveResults {
         public bool Solvable;
         public ushort Moves;
-        public ushort AntiGoalMoves;
+        public ushort Deadends;
     }
 
     public class PositionInfo {
         public PretzelPosition Position { get; }
-        public int ParentIndex { get; set; }
-        public bool IsAntiGoalMove { get; }
-        public PositionInfo(PretzelPosition position, int parentIndex, bool isAntiGoalMove) {
+        public List<int> ParentIndexes { get; } // first element always traces back shortest path; others will exist only for FullTree analysis
+        public PositionInfo(PretzelPosition position, int parentIndex) {
             Position = position;
-            ParentIndex = parentIndex;
-            IsAntiGoalMove = isAntiGoalMove;
+            ParentIndexes = new List<int> { parentIndex };
         }
     }
 

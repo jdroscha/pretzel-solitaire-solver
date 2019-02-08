@@ -22,7 +22,8 @@ namespace PretzelSolitaireSolver {
 
     public enum ApproachType {
         BreadthFirst = 0,
-        RandomPlay = 1
+        FullTree = 1,
+        RandomPlay = 2
     }
 
     public enum OutputType {
@@ -80,7 +81,7 @@ namespace PretzelSolitaireSolver {
                     case 't': { arguments[ArgumentType.trials] = value.Clamp(1,100); break; }
                     case 'i': { arguments[ArgumentType.iterationsPerTrial] = value.Clamp(1,10000); break; }
                     case 'd': { arguments[ArgumentType.dealType] = value.Clamp(0,3); break; }
-                    case 'a': { arguments[ArgumentType.approach] = value.Clamp(0,1); break; }
+                    case 'a': { arguments[ArgumentType.approach] = value.Clamp(0,2); break; }
                     case 'o': { arguments[ArgumentType.outputType] = value.Clamp(0,2); break; }
                     default: { arguments.Add(ArgumentType.help, 1); break; }
                 }
@@ -101,7 +102,8 @@ namespace PretzelSolitaireSolver {
             Console.WriteLine("         2 is shuffle by suit then deal sets randomly");
             Console.WriteLine("      a=(0|1), approach for solving, default is 0:");
             Console.WriteLine("         0 is breadth-first (minimum number of moves)");
-            Console.WriteLine("         1 is random moves");
+            Console.WriteLine("         1 is full tree analysis (solutions vs. deadend paths)");
+            Console.WriteLine("         2 is random moves");
             Console.WriteLine("      o=(0|1|2), output type, default is 1:");
             Console.WriteLine("         0 is summary results only");
             Console.WriteLine("         1 is summary results with move counts");
