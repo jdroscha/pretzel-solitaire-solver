@@ -7,14 +7,18 @@ namespace PretzelSolitaireSolver {
         public bool Solvable;
         public ushort Moves;
         public ushort Deadends;
+        public bool HasDuellingDeuces;
+        public bool HasDuckingCrab;
     }
 
     public class PositionInfo {
         public PretzelPosition Position { get; }
-        public List<int> ParentIndexes { get; } // first element always traces back shortest path; others will exist only for FullTree analysis
-        public PositionInfo(PretzelPosition position, int parentIndex) {
+        public List<LinkedListNode<PositionInfo>> ParentIndexes { get; } // first element always traces back shortest path; others will exist only for FullTree analysis
+        public short Score { get; }
+        public PositionInfo(PretzelPosition position, LinkedListNode<PositionInfo> parent, short score) {
             Position = position;
-            ParentIndexes = new List<int> { parentIndex };
+            ParentIndexes = new List<LinkedListNode<PositionInfo>> { parent };
+            Score = score;
         }
     }
 
