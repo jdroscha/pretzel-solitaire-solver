@@ -1,4 +1,9 @@
-# Analysis of Procedural Puzzle Challenge Generation for Pretzel Solitaire
+# ALERT: Project Moved
+
+The current version of this project is now located at
+[https://github.com/mgoadric/entangled-components/tree/master/pretzel-solitaire-solver](https://github.com/mgoadric/entangled-components/tree/master/pretzel-solitaire-solver)
+
+## Analysis of Procedural Puzzle Challenge Generation for Pretzel Solitaire
 
 Challenges for solitaire puzzle games are typically limited in number and designed in advance by humans. Alternately, some games incorporate stochastic setup rules, in which the solver randomly sets up the game board before solving the challenge, which can greatly increase the number of possible challenges. However, these setup rules can often generate unsolvable or uninteresting challenges. 
 
